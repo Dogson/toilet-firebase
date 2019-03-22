@@ -14,3 +14,4 @@ exports.getToilet = toilets.getToilet;
 exports.updateUserReview = ratings.updateUserReview;
 exports.createUserReview = ratings.createUserReview;
 exports.deleteUserReview = ratings.deleteUserReview;
+exports.getUserReviews = ratings.getUserReviews;

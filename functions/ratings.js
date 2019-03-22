@@ -3,7 +3,7 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
 
-exports.getRating = function(app, ratingId) {
+exports.getRating = function (app, ratingId) {
     return app.database().ref('ratings/' + ratingId).once('value')
         .then((snapshot) => {
             if (snapshot.val()) {
@@ -12,7 +12,7 @@ exports.getRating = function(app, ratingId) {
         })
 };
 
-exports.createRating = function(app, rating) {
+exports.createRating = function (app, rating) {
     delete rating.uid;
     let newRef = app.database().ref('ratings').push();
     let key = newRef.key;
@@ -22,7 +22,7 @@ exports.createRating = function(app, rating) {
         });
 };
 
-exports.updateRating = function(app, rating) {
+exports.updateRating = function (app, rating) {
     let id = rating.uid;
     if (!rating.uid)
         return this.createRating(app, rating);
@@ -34,11 +34,11 @@ exports.updateRating = function(app, rating) {
 };
 
 
-exports.deleteRating = function(app, ratingId) {
+exports.deleteRating = function (app, ratingId) {
     return app.database().ref('ratings/' + ratingId).remove();
 };
 
-exports.getUserRating = function(app, userRatingId) {
+exports.getUserRating = function (app, userRatingId) {
     let userRating;
     return app.database().ref('userRatings/' + userRatingId).once('value')
         .then((snapshot) => {
@@ -58,7 +58,7 @@ exports.getUserRating = function(app, userRatingId) {
         })
 };
 
-exports.createUserRating = function(app, userId, toiletId, userRating) {
+exports.createUserRating = function (app, userId, toiletId, userRating) {
     let uRating = userRating;
     return this.createRating(app, userRating.rating)
         .then((ratingId) => {
@@ -74,9 +74,9 @@ exports.createUserRating = function(app, userId, toiletId, userRating) {
 
 };
 
-exports.updateUserRating = function(app, userId, toiletId, userRating) {
+exports.updateUserRating = function (app, userId, toiletId, userRating) {
     return this.getUserRating(app, userRating.uid).then((ur) => {
-        if (ur && ur.userId ===  userId) {
+        if (ur && ur.userId === userId) {
             userRating.rating.uid = userRating.rating.ratingId;
             return this.updateRating(app, userRating.rating)
                 .then((ratingId) => {
@@ -93,7 +93,7 @@ exports.updateUserRating = function(app, userId, toiletId, userRating) {
     });
 };
 
-exports.deleteUserRating = function(app, userId, userRatingId) {
+exports.deleteUserRating = function (app, userId, userRatingId) {
     return app.database().ref('userRatings/' + userRatingId).once('value')
         .then((snapshot) => {
             const userRating = snapshot.val();
@@ -116,7 +116,7 @@ exports.createUserReview = functions.https.onCall((data, context) => {
     const app = admin.initializeApp(appOptions, 'kooy');
     const deleteApp = () => app.delete().catch(() => null);
 
-    const toiletId  = data.toiletId;
+    const toiletId = data.toiletId;
     const userRating = data.userRating;
     const userId = context.auth.uid;
     return toilets.createOrUpdateToilet(app, {uid: toiletId})
@@ -153,7 +153,7 @@ exports.updateUserReview = functions.https.onCall((data, context) => {
     const app = admin.initializeApp(appOptions, 'app');
     const deleteApp = () => app.delete().catch(() => null);
 
-    const toiletId  = data.toiletId;
+    const toiletId = data.toiletId;
     const userRating = data.userRating;
     const userId = context.auth.uid;
     return toilets.createOrUpdateToilet(app, {uid: toiletId})
@@ -174,7 +174,7 @@ exports.deleteUserReview = functions.https.onCall((data, context) => {
     const app = admin.initializeApp(appOptions, 'app');
     const deleteApp = () => app.delete().catch(() => null);
 
-    const toiletId  = data.toiletId;
+    const toiletId = data.toiletId;
     const userRatingId = data.userRatingId;
     const userId = context.auth.uid;
     return this.deleteUserRating(app, userId, userRatingId)
@@ -184,4 +184,49 @@ exports.deleteUserReview = functions.https.onCall((data, context) => {
         .then(() => {
             return deleteApp();
         })
+});
+
+exports.getUserReviews = functions.https.onCall((data, context) => {
+    const appOptions = JSON.parse(process.env.FIREBASE_CONFIG);
+    appOptions.databaseAuthVariableOverride = context.auth;
+    const app = admin.initializeApp(appOptions, 'app');
+    const deleteApp = () => app.delete().catch(() => null);
+
+    const userId = data.userId;
+
+    return app.database().ref('userRatings').orderByChild('userId').equalTo(userId).once('value')
+        .then((snapshot) => {
+            let ratingArrays;
+            let userRatings = snapshot.val();
+            if (userRatings) {
+                ratingArrays = Object.keys(userRatings).map((key) => {
+                    let u = userRatings[key];
+                    u.uid = key;
+                    return u;
+                });
+            }
+            else {
+                ratingArrays = [];
+            }
+
+            return Promise.all(ratingArrays.map((rating) => {
+                return this.getRating(app, rating.ratingId)
+                    .then((result) => {
+                        rating.rating = result;
+                        return rating;
+                    });
+            }));
+        })
+        .then((ratingArrays) => {
+            return deleteApp()
+                .then(() => {
+                    return ratingArrays;
+                })
+        })
+        .catch((error) => {
+            return deleteApp().then(() => {
+                return Promise.reject(error);
+            });
+        });
+
 });
