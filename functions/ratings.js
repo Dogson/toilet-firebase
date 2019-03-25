@@ -53,6 +53,7 @@ exports.getUserRating = function (app, userRatingId) {
                 isMixed: userRating.isMixed,
                 rating: rating,
                 userId: userRating.userId,
+                text: userRating.text
             };
             return userRating;
         })
@@ -67,7 +68,8 @@ exports.createUserRating = function (app, userId, toiletId, userRating) {
                 isMixed: uRating.isMixed,
                 ratingId: ratingId,
                 userId: userId,
-                toiletId: toiletId
+                toiletId: toiletId,
+                text: uRating.text ? uRating.text.replace(/\n\s*\n\s*\n/g, '\n\n') : uRating.text
             };
             return app.database().ref('userRatings').push().set(userRating);
         });
@@ -85,7 +87,8 @@ exports.updateUserRating = function (app, userId, toiletId, userRating) {
                         isMixed: userRating.isMixed,
                         ratingId: ratingId,
                         userId: userId,
-                        toiletId: toiletId
+                        toiletId: toiletId,
+                        text: userRating.text ? userRating.text.replace(/\n\s*\n\s*\n/g, '\n\n') : userRating.text
                     };
                     return app.database().ref('userRatings/' + userRating.uid).set(userRatingUpdated);
                 });
