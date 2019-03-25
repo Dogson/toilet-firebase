@@ -11,6 +11,7 @@ const toilets = require('./toilets');
 const ratings = require('./ratings');
 
 exports.getToilet = toilets.getToilet;
+exports.getToiletReviews = toilets.getToiletReviews;
 exports.updateUserReview = ratings.updateUserReview;
 exports.createUserReview = ratings.createUserReview;
 exports.deleteUserReview = ratings.deleteUserReview;

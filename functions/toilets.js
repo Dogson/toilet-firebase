@@ -184,3 +184,59 @@ exports.updateToiletRating = function (app, toiletId, userId) {
         })
 
 };
+
+exports.getToiletReviews = functions.https.onCall((data, context) => {
+    const appOptions = JSON.parse(process.env.FIREBASE_CONFIG);
+    appOptions.databaseAuthVariableOverride = context.auth;
+    const app = admin.initializeApp(appOptions, 'app');
+    const deleteApp = () => app.delete().catch(() => null);
+
+    const toiletId = data.toiletId;
+    return app.database().ref('userRatings').orderByChild('toiletId').equalTo(toiletId).once('value')
+        .then((snapshot) => {
+            let ratingArrays;
+            let userRatings = snapshot.val();
+            if (userRatings) {
+                ratingArrays = Object.keys(userRatings).map((key) => {
+                    let u = userRatings[key];
+                    u.uid = key;
+                    return u;
+                });
+            }
+            else {
+                ratingArrays = [];
+            }
+
+            return Promise.all(ratingArrays.map((rating) => {
+                return ratings.getRating(app, rating.ratingId)
+                    .then((result) => {
+                        rating.rating = result;
+                        return rating;
+                    });
+            }));
+        })
+        .then((ratingArrays) => {
+            return Promise.all(ratingArrays.map((rating) => {
+                return app.database().ref('users/' + rating.userId).once('value')
+                    .then((snapshot) => {
+                        if (snapshot.val()) {
+                            rating.user = snapshot.val();
+                            return rating;
+                        }
+                    })
+            }));
+        })
+        .then((ratingArrays) => {
+            return deleteApp()
+                .then(() => {
+                    return ratingArrays;
+                })
+        })
+        .catch((error) => {
+            return deleteApp().then(() => {
+                return Promise.reject(error);
+            });
+        });
+
+
+});
