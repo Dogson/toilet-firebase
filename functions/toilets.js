@@ -200,6 +200,7 @@ exports.getToiletReviews = functions.https.onCall((data, context) => {
                 ratingArrays = Object.keys(userRatings).map((key) => {
                     let u = userRatings[key];
                     u.uid = key;
+                    u.date = u.date || 999999999999999999999;
                     return u;
                 });
             }
@@ -229,7 +230,9 @@ exports.getToiletReviews = functions.https.onCall((data, context) => {
         .then((ratingArrays) => {
             return deleteApp()
                 .then(() => {
-                    return ratingArrays;
+                    return ratingArrays.sort((a, b) => {
+                        return parseInt(b.date) - parseInt(a.date);
+                    });
                 })
         })
         .catch((error) => {
