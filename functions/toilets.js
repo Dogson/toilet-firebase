@@ -192,6 +192,7 @@ exports.getToiletReviews = functions.https.onCall((data, context) => {
     const deleteApp = () => app.delete().catch(() => null);
 
     const toiletId = data.toiletId;
+    const lastLoadedReview = data.lastLoadedReview;
     return app.database().ref('userRatings').orderByChild('toiletId').equalTo(toiletId).once('value')
         .then((snapshot) => {
             let ratingArrays;
@@ -230,9 +231,13 @@ exports.getToiletReviews = functions.https.onCall((data, context) => {
         .then((ratingArrays) => {
             return deleteApp()
                 .then(() => {
-                    return ratingArrays.sort((a, b) => {
+                    let sortedArray = ratingArrays.sort((a, b) => {
                         return parseInt(b.date) - parseInt(a.date);
                     });
+                    let lastLoadedIndex = lastLoadedReview ? sortedArray.findIndex((review) => {
+                        return review.uid === lastLoadedReview;
+                    }) : -1;
+                    return sortedArray.slice(lastLoadedIndex + 1, lastLoadedIndex + 11);
                 })
         })
         .catch((error) => {
