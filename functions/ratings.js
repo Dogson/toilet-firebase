@@ -70,7 +70,7 @@ exports.createUserRating = function (app, userId, toiletId, userRating) {
                 ratingId: ratingId,
                 userId: userId,
                 toiletId: toiletId,
-                text: uRating.text ? uRating.text.replace(/\n\s*\n\s*\n/g, '\n\n') : uRating.text,
+                text: uRating.text ? uRating.text.replace(/\n\s*\n\s*\n/g, '\n\n') : null,
                 date: new Date().getTime()
             };
             return app.database().ref('userRatings').push().set(userRating);
@@ -90,7 +90,7 @@ exports.updateUserRating = function (app, userId, toiletId, userRating) {
                         ratingId: ratingId,
                         userId: userId,
                         toiletId: toiletId,
-                        text: userRating.text ? userRating.text.replace(/\n\s*\n\s*\n/g, '\n\n') : userRating.text,
+                        text: userRating.text ? userRating.text.replace(/\n\s*\n\s*\n/g, '\n\n') : null,
                         date: new Date().getTime()
                     };
                     return app.database().ref('userRatings/' + userRating.uid).set(userRatingUpdated);
