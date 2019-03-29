@@ -2,6 +2,12 @@ const ratings = require('./ratings');
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 
+const TOILET_REVIEWS_SORT_OPTIONS = {
+    MOST_RECENT: 0,
+    MOST_POSITIVE: 1,
+    MOST_NEGATIVE: 2
+}
+
 exports.getToilet = functions.https.onCall((data, context) => {
     const appOptions = JSON.parse(process.env.FIREBASE_CONFIG);
     appOptions.databaseAuthVariableOverride = context.auth;
@@ -193,6 +199,7 @@ exports.getToiletReviews = functions.https.onCall((data, context) => {
 
     const toiletId = data.toiletId;
     const lastLoadedReview = data.lastLoadedReview;
+    const sortOption = data.sortOption;
     return app.database().ref('userRatings').orderByChild('toiletId').equalTo(toiletId).once('value')
         .then((snapshot) => {
             let ratingArrays;
@@ -231,9 +238,24 @@ exports.getToiletReviews = functions.https.onCall((data, context) => {
         .then((ratingArrays) => {
             return deleteApp()
                 .then(() => {
-                    let sortedArray = ratingArrays.sort((a, b) => {
-                        return parseInt(b.date) - parseInt(a.date);
-                    });
+                    let sortedArray;
+                    switch (sortOption) {
+                        case TOILET_REVIEWS_SORT_OPTIONS.MOST_POSITIVE:
+                            sortedArray = ratingArrays.sort((a, b) => {
+                                return parseInt(b.rating.global) - parseInt(a.rating.global);
+                            });
+                            break;
+                        case TOILET_REVIEWS_SORT_OPTIONS.MOST_NEGATIVE:
+                            sortedArray = ratingArrays.sort((a, b) => {
+                                return parseInt(a.rating.global) - parseInt(b.rating.global);
+                            });
+                            break;
+                        default:
+                            sortedArray = ratingArrays.sort((a, b) => {
+                                return parseInt(b.date) - parseInt(a.date);
+                            });
+                            break;
+                    }
                     let lastLoadedIndex = lastLoadedReview ? sortedArray.findIndex((review) => {
                         return review.uid === lastLoadedReview;
                     }) : -1;
